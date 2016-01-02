@@ -78,12 +78,11 @@ int8_t isAnyDoorOpen()
 
 void setDoorVariables()
 {
-	if (areBothDoorsClosed()) {
-		doorClosed = 1;
-	}
-	if isAnyDoorOpen() {
+	if (isAnyDoorOpen()) {
 		doorOpened = 1;
-	}
+	} else if (areBothDoorsClosed()) {
+		doorClosed = 1;
+	}  
 }
 
 ISR (PCINT0_vect)
@@ -159,19 +158,59 @@ enum eEventTypes
 	evSeconds3Tick
 };
 
-int8_t getNextEvent()
+enum stateTypes
+{
+	alarmState = 1,
+	idleState	
+};
+
+
+typedef struct {
+	int8_t currentState;    
+	int8_t alarmSequence;
+	int16_t delayCounter;
+} alarmStateDataType;
+
+alarmStateDataType currentAlarmStateData;
+
+void setIdleAlarmStateData()
+{
+	currentAlarmStateData.currentState = idleState;
+	currentAlarmStateData.alarmSequence = 0;
+	currentAlarmStateData.delayCounter = 0;
+}
+
+void setAlarmStateData()
+{
+	currentAlarmStateData.currentState = alarmState;
+	currentAlarmStateData.alarmSequence = 1;
+	currentAlarmStateData.delayCounter = 2;
+}
+
+
+int8_t  isInAlarmState()
 {
 	int8_t res = 0;
-	if (sec3Tick) {
-		sec3Tick = 0;
-		res = evSeconds3Tick;
-	}  else if (doorOpened) {
-		doorOpened = 0;
-		res = evDoorsOpen;
-	}  else  if  (doorClosed){
-		doorClosed = 0;
-		res = evDoorsClosed;
+	if (currentAlarmStateData.currentState == alarmState) {
+		res = 1;
 	}
+	return res;
+}
+
+
+int8_t getNextEvent()
+{
+	int8_t res = 0; 
+	if  (doorClosed) && (!isInAlarmState()) )){
+		res = evDoorsClosed;
+	} else if ((doorOpened) && (isInAlarmState())) {
+		res = evDoorsOpen;
+	}  else if (sec3Tick) {
+		res = evSeconds3Tick;
+	}  
+	doorClosed = 0;
+	doorOpened = 0;
+	sec3Tick = 0;
 	return res;
 }
 
@@ -185,6 +224,7 @@ int main(void)
 {
 	int8_t evnt;
 	initHW();
+	setIdleAlarmStateData();
     while(1)
     {
 		evnt = getNextEvent();
