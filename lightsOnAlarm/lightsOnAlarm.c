@@ -19,6 +19,8 @@ int8_t sec3Tick;
 
 //  sec3 Timer  timer 1
 
+void setDoorVariables();
+
 void initTimer1()
 {
 	TCCR1 = (1 << CTC1) ;    // ctc mode with ocr1c, timer stopped 
@@ -26,10 +28,13 @@ void initTimer1()
 	TCNT1 = 0x00;
 	TIMSK |= (1<< TOIE1);
 	PLLCSR &=  ~( 1 << PCKE);  // use system clock as clock source for timer1 
+	sec3Tick = 0;
 }
 
 ISR(TIMER1_OVF_vect)
 {
+	sec3Tick = 1;
+	setDoorVariables();
 }
 
 void startTimer1()
@@ -44,7 +49,6 @@ void stopTimer1()
 
 //  sensor port query and trigger   PB1
 
-void doorSensorTrigger();
 
 void initSensorPort()
 {
@@ -54,6 +58,8 @@ void initSensorPort()
 	
 	GIMSK  |=  (1<<PCIE) ;   // enable interrupt on port B
 	PCMSK  |=  (1<<PCINT1);	 // enable interrupt on PINB1
+	doorClosed = 0;
+	doorOpened = 0;
 }
 
 int8_t areBothDoorsClosed()
@@ -70,9 +76,19 @@ int8_t isAnyDoorOpen()
 	return res;
 }
 
+void setDoorVariables()
+{
+	if (areBothDoorsClosed()) {
+		doorClosed = 1;
+	}
+	if isAnyDoorOpen() {
+		doorOpened = 1;
+	}
+}
+
 ISR (PCINT0_vect)
 {
-	doorSensorTrigger();
+	setDoorVariables();
 }
 
 //  buzzer pwm   output   approx.  4kHz   PB0
@@ -99,7 +115,6 @@ void initBuzzer()
 }
 
 /////////////////////////    end  buzzer code  ////////////////////////////
-
 
 //   relais   output    PB4
 
@@ -131,11 +146,6 @@ void initHW()
 }
 
 
-void doorSensorTrigger()
-{
-	
-}
-
 
 ////////////////////
 
@@ -149,12 +159,36 @@ enum eEventTypes
 	evSeconds3Tick
 };
 
+int8_t getNextEvent()
+{
+	int8_t res = 0;
+	if (sec3Tick) {
+		sec3Tick = 0;
+		res = evSeconds3Tick;
+	}  else if (doorOpened) {
+		doorOpened = 0;
+		res = evDoorsOpen;
+	}  else  if  (doorClosed){
+		doorClosed = 0;
+		res = evDoorsClosed;
+	}
+	return res;
+}
+
+void handleEvent(int8_t ev)
+{
+	
+}
+
 
 int main(void)
 {
+	int8_t evnt;
 	initHW();
     while(1)
     {
-        //TODO:: Please write your application code 
+		evnt = getNextEvent();
+		handleEvent(evnt);
+		// any sleep or idle mode .... ? maybe possible and senseful ?   
     }
 }
