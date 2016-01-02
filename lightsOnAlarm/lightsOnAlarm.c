@@ -10,6 +10,38 @@
 #include <avr/interrupt.h>
 #include <util/atomic.h>
 
+// hardware events 
+// interrupt variables
+
+int8_t doorOpened;
+int8_t doorClosed;
+int8_t sec3Tick;
+
+//  sec3 Timer  timer 1
+
+void initTimer1()
+{
+	TCCR1 = (1 << CTC1) ;    // ctc mode with ocr1c, timer stopped 
+	OCR1C = 162;             // will give approx 3 ctc events per second
+	TCNT1 = 0x00;
+	TIMSK |= (1<< TOIE1);
+	PLLCSR &=  ~( 1 << PCKE);  // use system clock as clock source for timer1 
+}
+
+ISR(TIMER1_OVF_vect)
+{
+}
+
+void startTimer1()
+{
+	TCCR1 |=  ((1 << CS13) | (1 << CS12)  | (1 << CS11)  | (1 << CS10)) ; // start prescaler 16384
+}
+
+void stopTimer1()
+{
+	TCCR1 &=  ~((1 << CS13) | (1 << CS12)  | (1 << CS11)  | (1 << CS10))  ; // clear any prescaler bit
+}
+
 //  sensor port query and trigger   PB1
 
 void doorSensorTrigger();
@@ -93,6 +125,8 @@ void initHW()
 	initSensorPort();
 	initBuzzer();
 	initRelais();
+	initTimer1();
+//	startTimer1();
 	sei();
 }
 
@@ -101,6 +135,20 @@ void doorSensorTrigger()
 {
 	
 }
+
+
+////////////////////
+
+// software events
+
+enum eEventTypes
+{
+	evNone = 0,
+	evDoorsOpen,
+	evDoorsClosed,
+	evSeconds3Tick
+};
+
 
 int main(void)
 {
