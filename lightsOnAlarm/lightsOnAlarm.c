@@ -201,7 +201,7 @@ int8_t  isInAlarmState()
 int8_t getNextEvent()
 {
 	int8_t res = 0; 
-	if  (doorClosed) && (!isInAlarmState()) )){
+	if  ((doorClosed) && (!isInAlarmState()) ){
 		res = evDoorsClosed;
 	} else if ((doorOpened) && (isInAlarmState())) {
 		res = evDoorsOpen;
@@ -214,9 +214,70 @@ int8_t getNextEvent()
 	return res;
 }
 
+void advanceAlarmState()
+{
+	if (currentAlarmStateData.delayCounter > 0)  {
+		-- currentAlarmStateData.delayCounter;
+	}  else {
+		++ currentAlarmStateData.alarmSequence;
+		if (currentAlarmStateData.alarmSequence > 7) {
+			currentAlarmStateData.alarmSequence = 1;
+		}
+		if ((currentAlarmStateData.alarmSequence == 2) || (currentAlarmStateData.alarmSequence == 4) 
+				|| (currentAlarmStateData.alarmSequence == 6)) {
+			startBuzzer();			
+		} else {
+			stopBuzzer();
+		}
+		if (currentAlarmStateData.alarmSequence == 7) {
+			currentAlarmStateData.delayCounter = 60;
+		} else {
+			currentAlarmStateData.delayCounter = 2;
+		}
+	}
+	
+}
+
 void handleEvent(int8_t ev)
 {
-	
+	if ((ev == evSeconds3Tick) && (isInAlarmState())) {
+		advanceAlarmState();
+	} else if ((ev == evDoorsClosed) && !(isInAlarmState())) {
+		setAlarmStateData();
+		setRelaisOn();
+	} else if ((ev == evDoorsOpen) && (isInAlarmState())) {
+		setIdleAlarmStateData();	
+		setRelaisOff();
+	}
+}
+
+int8_t testEvent;
+
+void testSeequence()
+{
+	while (1) {
+		if (testEvent == 1) {
+			startBuzzer();
+		}
+		if (testEvent == 2) {
+			stopBuzzer();
+		}
+		if (testEvent == 3) {
+			setRelaisOn();
+		}
+		if (testEvent == 4) {
+			setRelaisOff();
+		}
+		if (testEvent == 5) {
+			startTimer1();
+		}
+		if (testEvent == 6) {
+			stopTimer1();
+		}
+		if (testEvent == 7) {
+			setDoorVariables();
+		}
+	}
 }
 
 
@@ -225,10 +286,14 @@ int main(void)
 	int8_t evnt;
 	initHW();
 	setIdleAlarmStateData();
+	testEvent = 0;
+	testSeequence();
+	startTimer1();
     while(1)
     {
 		evnt = getNextEvent();
 		handleEvent(evnt);
+		
 		// any sleep or idle mode .... ? maybe possible and senseful ?   
     }
 }
