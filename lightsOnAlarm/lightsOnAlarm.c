@@ -42,15 +42,16 @@ void setDoorVariables();
 
 void initTimer1()
 {
-	TCCR1 = (1 << CTC1) ;    // ctc mode with ocr1c, timer stopped 
+	TCCR1 = (1 << PWM1A) ;    // ctc mode with ocr1c, timer stopped 
 	OCR1C = 162;             // will give approx 3 ctc events per second
+	OCR1A = OCR1C;
 	TCNT1 = 0x00;
-	TIMSK |= (1<< TOIE1);
+	TIMSK |= (1<< OCIE1A);
 	PLLCSR &=  ~( 1 << PCKE);  // use system clock as clock source for timer1 
 	sec3Tick = 0;
 }
 
-ISR(TIMER1_OVF_vect)
+ISR(TIMER1_COMPA_vect)
 {
 	sec3Tick = 1;
 	setDoorVariables();
@@ -58,7 +59,7 @@ ISR(TIMER1_OVF_vect)
 
 void startTimer1()
 {
-	TCCR1 |=  ((1 << CS13) | (1 << CS12)  | (1 << CS11)  | (1 << CS10)) ; // start prescaler 16384
+	TCCR1 |=  ((1 << CS13) | (1 << CS12)  | (1 << CS10)) ; // start prescaler 16384 /4 without --->      //    | (1 << CS11)
 }
 
 void stopTimer1()
@@ -66,17 +67,17 @@ void stopTimer1()
 	TCCR1 &=  ~((1 << CS13) | (1 << CS12)  | (1 << CS11)  | (1 << CS10))  ; // clear any prescaler bit
 }
 
-//  sensor port query and trigger   PB1
+//  sensor port query and trigger   PB0
 
 
 void initSensorPort()
 {
 	MCUCR  &=  ~(1<< PUD);   // enable pullup
-	DDRB  &=   ~(1<< PB1);   //  PB1 as input
-	PORTB  |=  (1<< PB1 );   //  set pullup high 
+	DDRB  &=   ~(1<< PB0);   //  PB0 as input
+	PORTB  |=  (1<< PB0 );   //  set pullup high 
 	
 	GIMSK  |=  (1<<PCIE) ;   // enable interrupt on port B
-	PCMSK  |=  (1<<PCINT1);	 // enable interrupt on PINB1
+	PCMSK  |=  (1<<PCINT0);	 // enable interrupt on PINB1
 	doorClosed = 0;
 	doorOpened = 0;
 }
@@ -84,7 +85,7 @@ void initSensorPort()
 int8_t areBothDoorsClosed()
 {
 	int8_t res;
-	res =  (PINB & (1<< PINB1));
+	res =  (PINB & (1<< PINB0));
 	return res;
 }
 
@@ -109,7 +110,7 @@ ISR (PCINT0_vect)
 	setDoorVariables();
 }
 
-//  buzzer pwm   output   approx.  4kHz   PB0
+//  buzzer pwm   output   approx.  4kHz   PB1
 
 
 void startBuzzer()
@@ -125,7 +126,7 @@ void stopBuzzer()
 void initBuzzer()
 {
 	// buzzer using pwm on timer 2
-	TCCR0A = ((1 << WGM00) |  (1 <<  WGM01)  |  (1 << COM0A1))  ;
+	TCCR0A = ((1 << WGM00) |  (1 <<  WGM01)  |  (1 << COM0B1))  ;
 	TCCR0B = (1  << WGM02)  ;
 	OCR0A =  0x22;      // top value
 	OCR0B =  0x11;      //  square wave of approx 5k  at prescaler  64
@@ -159,7 +160,7 @@ void initHW()
 	initBuzzer();
 	initRelais();
 	initTimer1();
-//	startTimer1();
+	startTimer1();
 	sei();
 }
 
@@ -267,6 +268,7 @@ void handleEvent(int8_t ev)
 	} else if ((ev == evDoorsOpen) && (isInAlarmState())) {
 		setIdleAlarmStateData();	
 		setRelaisOff();
+		stopBuzzer();
 	}
 }
 
@@ -305,8 +307,8 @@ int main(void)
 	int8_t evnt;
 	initHW();
 	setIdleAlarmStateData();
-	testEvent = 0;
-	testSeequence();
+//	testEvent = 0;
+//	testSeequence();
 	startTimer1();
     while(1)
     {
