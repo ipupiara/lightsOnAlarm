@@ -242,7 +242,7 @@ void handleEvent(int8_t ev)
 {
 	if ((ev == evSeconds3Tick) && (isInAlarmState())) {
 		advanceAlarmState();
-	} else if ((ev == evDoorsClosed) && !(isInAlarmState())) {
+	} else if ((ev == evDoorsClosed) && (! isInAlarmState())) {
 		setAlarmStateData();
 		setRelaisOn();
 	} else if ((ev == evDoorsOpen) && (isInAlarmState())) {
