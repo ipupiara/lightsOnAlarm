@@ -9,6 +9,25 @@
 #include <stdio.h>
 #include <avr/interrupt.h>
 #include <util/atomic.h>
+#include <avr/sleep.h>
+
+// sleep mode idle
+
+
+void enterIdleSleepMode()
+{
+	//	MCUCR |= 0x00;    //((1<<SM0) | (1<<SM1)); // select idle sleep mode
+//	ACSR |= (1 << ACD);  // disable analog comparator to save power (see atmega324a datasheet)
+//	MCUCR &=  ~((1 << SM0) | (1<< SM1));    // select idle sleep mode
+	set_sleep_mode(SLEEP_MODE_IDLE  );
+//	MCUCR |= (1<<SE) ; // enter idle sleep mode
+	sleep_enable();
+	sleep_cpu();
+	sleep_disable();
+//	MCUCR &= ~(1<<SE); // disable sleep mode after wake up
+	// tobe tested
+}
+
 
 // hardware events 
 // interrupt variables
@@ -293,7 +312,9 @@ int main(void)
     {
 		evnt = getNextEvent();
 		handleEvent(evnt);
-		
+		if (! isInAlarmState()) {
+			enterIdleSleepMode();
+		}
 		// any sleep or idle mode .... ? maybe possible and senseful ?   
     }
 }
