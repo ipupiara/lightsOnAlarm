@@ -128,8 +128,8 @@ void initBuzzer()
 	// buzzer using pwm on timer 2
 	TCCR0A = ((1 << WGM00) |  (1 <<  WGM01)  |  (1 << COM0B1))  ;
 	TCCR0B = (1  << WGM02)  ;
-	OCR0A =  0x22;      // top value
-	OCR0B =  0x11;      //  square wave of approx 5k  at prescaler  64
+	OCR0A =  30;      // top value
+	OCR0B =  15;      //  square wave of approx 5k  at prescaler  64
 	DDRB  |=  (1 <<  DDB1 );
 }
 
@@ -234,22 +234,24 @@ int8_t getNextEvent()
 	return res;
 }
 
+#define amtBeeps  3
+#define amtSteps ((2* amtBeeps) + 1)
+
 void advanceAlarmState()
 {
 	if (currentAlarmStateData.delayCounter > 0)  {
 		-- currentAlarmStateData.delayCounter;
 	}  else {
 		++ currentAlarmStateData.alarmSequence;
-		if (currentAlarmStateData.alarmSequence > 7) {
+		if (currentAlarmStateData.alarmSequence > amtSteps) {
 			currentAlarmStateData.alarmSequence = 1;
 		}
-		if ((currentAlarmStateData.alarmSequence == 2) || (currentAlarmStateData.alarmSequence == 4) 
-				|| (currentAlarmStateData.alarmSequence == 6)) {
+		if ((currentAlarmStateData.alarmSequence % 2) == 0)  {
 			startBuzzer();			
 		} else {
 			stopBuzzer();
 		}
-		if (currentAlarmStateData.alarmSequence == 7) {
+		if (currentAlarmStateData.alarmSequence == amtSteps) {
 			currentAlarmStateData.delayCounter = 60;
 		} else {
 			currentAlarmStateData.delayCounter = 2;
