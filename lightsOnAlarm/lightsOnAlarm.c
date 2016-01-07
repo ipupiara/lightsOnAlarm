@@ -160,7 +160,6 @@ void initHW()
 	initBuzzer();
 	initRelais();
 	initTimer1();
-	startTimer1();
 	sei();
 }
 
